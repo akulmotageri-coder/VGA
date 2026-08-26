@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.example.vga.audioseparation.voice.VoiceInputScreen
 import java.io.File
 import java.util.Locale
+import androidx.compose.material3.AlertDialog
 
 // ============================================================
 // COLORS
@@ -880,9 +881,128 @@ fun ExtractedVoiceScreen(
         mutableStateOf<String?>(null)
     }
 
+    var fileToDelete by remember {
+        mutableStateOf<File?>(null)
+    }
+
     val mediaPlayer = remember {
         MediaPlayer()
     }
+
+    // ========================================================
+    // DELETE CONFIRMATION
+    // ========================================================
+
+    if (fileToDelete != null) {
+
+        AlertDialog(
+            onDismissRequest = {
+                fileToDelete = null
+            },
+
+            title = {
+
+                Text(
+                    text = "Delete recording?",
+                    color = Slate,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+
+            text = {
+
+                Text(
+                    text =
+                        "This extracted voice recording will be permanently removed from your device.",
+                    color = Muted,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            },
+
+            confirmButton = {
+
+                Text(
+                    text = "Delete",
+                    color = Berry,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+
+                    modifier = Modifier
+                        .clickable {
+
+                            val file =
+                                fileToDelete
+
+                            if (file != null) {
+
+                                // Stop if currently playing.
+
+                                if (
+                                    currentlyPlaying ==
+                                    file.absolutePath
+                                ) {
+
+                                    try {
+                                        if (mediaPlayer.isPlaying) {
+                                            mediaPlayer.stop()
+                                        }
+                                    } catch (_: Exception) {
+                                    }
+
+                                    currentlyPlaying = null
+                                }
+
+                                // Delete actual WAV file.
+
+                                file.delete()
+
+                                // Refresh list.
+
+                                files =
+                                    loadExtractedVoiceFiles(
+                                        context
+                                    )
+                            }
+
+                            fileToDelete = null
+                        }
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 8.dp
+                        )
+                )
+            },
+
+            dismissButton = {
+
+                Text(
+                    text = "Cancel",
+                    color = Muted,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+
+                    modifier = Modifier
+                        .clickable {
+                            fileToDelete = null
+                        }
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 8.dp
+                        )
+                )
+            },
+
+            containerColor = White,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+
+    // ========================================================
+    // CLEANUP
+    // ========================================================
 
     DisposableEffect(Unit) {
 
@@ -899,6 +1019,11 @@ fun ExtractedVoiceScreen(
         }
     }
 
+
+    // ========================================================
+    // MAIN SCREEN
+    // ========================================================
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -909,40 +1034,52 @@ fun ExtractedVoiceScreen(
             .padding(
                 start = 20.dp,
                 end = 20.dp,
-                top = 28.dp,
-                bottom = 28.dp
+                top = 20.dp,
+                bottom = 30.dp
             )
     ) {
+
 
         // ====================================================
         // TOP BAR
         // ====================================================
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier.fillMaxWidth(),
+
             verticalAlignment =
                 Alignment.CenterVertically
         ) {
 
-            CircleIconButton(
-                icon = "‹",
-                onClick = {
+            Text(
+                text = "‹",
+                color = Slate,
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Light,
 
-                    try {
-                        if (mediaPlayer.isPlaying) {
-                            mediaPlayer.stop()
+                modifier = Modifier
+                    .clickable {
+
+                        try {
+                            if (mediaPlayer.isPlaying) {
+                                mediaPlayer.stop()
+                            }
+                        } catch (_: Exception) {
                         }
-                    } catch (_: Exception) {
+
+                        currentlyPlaying = null
+
+                        onBack()
                     }
-
-                    currentlyPlaying = null
-
-                    onBack()
-                }
+                    .padding(
+                        horizontal = 8.dp,
+                        vertical = 2.dp
+                    )
             )
 
             Spacer(
-                modifier = Modifier.width(12.dp)
+                modifier = Modifier.width(10.dp)
             )
 
             Column {
@@ -950,7 +1087,7 @@ fun ExtractedVoiceScreen(
                 Text(
                     text = "Extracted Voice",
                     color = Slate,
-                    fontSize = 19.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -961,14 +1098,15 @@ fun ExtractedVoiceScreen(
                 Text(
                     text = "Your processed recordings",
                     color = SoftMuted,
-                    fontSize = 11.sp
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
 
 
         Spacer(
-            modifier = Modifier.height(38.dp)
+            modifier = Modifier.height(30.dp)
         )
 
 
@@ -1006,7 +1144,8 @@ fun ExtractedVoiceScreen(
                 )
 
                 Text(
-                    text = "Clean voice recordings created by VGA.",
+                    text =
+                        "Clean voice recordings created by VGA.",
                     color = Muted,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
@@ -1026,6 +1165,7 @@ fun ExtractedVoiceScreen(
                             horizontal = 12.dp,
                             vertical = 7.dp
                         ),
+
                     verticalAlignment =
                         Alignment.CenterVertically
                 ) {
@@ -1042,10 +1182,15 @@ fun ExtractedVoiceScreen(
                     )
 
                     Text(
-                        text = "${files.size} recording(s)",
+                        text =
+                            "${files.size} recording(s)",
+
                         color = Berry,
+
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+
+                        fontWeight =
+                            FontWeight.Bold
                     )
                 }
             }
@@ -1058,10 +1203,18 @@ fun ExtractedVoiceScreen(
 
 
         // ====================================================
-        // REFRESH FILE LIST
+        // REFRESH
         // ====================================================
 
-        files = loadExtractedVoiceFiles(context)
+        files =
+            loadExtractedVoiceFiles(
+                context
+            )
+
+
+        // ====================================================
+        // EMPTY / FILE LIST
+        // ====================================================
 
         if (files.isEmpty()) {
 
@@ -1073,9 +1226,11 @@ fun ExtractedVoiceScreen(
 
                 ExtractedVoiceCard(
                     file = file,
+
                     isPlaying =
                         currentlyPlaying ==
                                 file.absolutePath,
+
                     onPlay = {
 
                         try {
@@ -1085,11 +1240,14 @@ fun ExtractedVoiceScreen(
                                 file.absolutePath
                             ) {
 
-                                if (mediaPlayer.isPlaying) {
+                                if (
+                                    mediaPlayer.isPlaying
+                                ) {
                                     mediaPlayer.stop()
                                 }
 
-                                currentlyPlaying = null
+                                currentlyPlaying =
+                                    null
 
                             } else {
 
@@ -1106,20 +1264,235 @@ fun ExtractedVoiceScreen(
                                 currentlyPlaying =
                                     file.absolutePath
 
-                                mediaPlayer.setOnCompletionListener {
-                                    currentlyPlaying = null
-                                }
+                                mediaPlayer
+                                    .setOnCompletionListener {
+
+                                        currentlyPlaying =
+                                            null
+                                    }
                             }
 
                         } catch (_: Exception) {
 
                             currentlyPlaying = null
                         }
+                    },
+
+                    onDelete = {
+
+                        fileToDelete = file
                     }
                 )
 
                 Spacer(
                     modifier = Modifier.height(12.dp)
+                )
+            }
+        }
+    }
+}
+
+
+// ============================================================
+// EXTRACTED VOICE CARD
+// ============================================================
+
+@Composable
+private fun ExtractedVoiceCard(
+    file: File,
+    isPlaying: Boolean,
+    onPlay: () -> Unit,
+    onDelete: () -> Unit
+) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                White,
+                RoundedCornerShape(23.dp)
+            )
+            .border(
+                1.dp,
+                Border,
+                RoundedCornerShape(23.dp)
+            )
+            .padding(17.dp)
+    ) {
+
+
+        // ====================================================
+        // FILE INFORMATION
+        // ====================================================
+
+        Row(
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        if (isPlaying)
+                            Berry
+                        else
+                            Rose,
+                        CircleShape
+                    ),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                Text(
+                    text =
+                        if (isPlaying)
+                            "■"
+                        else
+                            "♫",
+
+                    color =
+                        if (isPlaying)
+                            White
+                        else
+                            Berry,
+
+                    fontSize = 19.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+
+
+            Spacer(
+                modifier = Modifier.width(13.dp)
+            )
+
+
+            Column(
+                modifier =
+                    Modifier.weight(1f)
+            ) {
+
+                Text(
+                    text = file.name,
+                    color = Slate,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+
+                Spacer(
+                    modifier = Modifier.height(4.dp)
+                )
+
+                Text(
+                    text =
+                        "WAV  •  ${formatFileSize(file.length())}",
+
+                    color = SoftMuted,
+
+                    fontSize = 11.sp
+                )
+            }
+        }
+
+
+        Spacer(
+            modifier = Modifier.height(14.dp)
+        )
+
+
+        // ====================================================
+        // PLAY + DELETE
+        // ====================================================
+
+        Row(
+            modifier =
+                Modifier.fillMaxWidth(),
+
+            horizontalArrangement =
+                Arrangement.spacedBy(9.dp)
+        ) {
+
+
+            // PLAY
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(
+                        if (isPlaying)
+                            Berry
+                        else
+                            Rose,
+
+                        RoundedCornerShape(50.dp)
+                    )
+                    .clickable {
+                        onPlay()
+                    }
+                    .padding(
+                        vertical = 10.dp
+                    ),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                Text(
+                    text =
+                        if (isPlaying)
+                            "■  Stop"
+                        else
+                            "▶  Play",
+
+                    color =
+                        if (isPlaying)
+                            White
+                        else
+                            Berry,
+
+                    fontSize = 12.sp,
+
+                    fontWeight =
+                        FontWeight.Bold
+                )
+            }
+
+
+            // DELETE
+
+            Box(
+                modifier = Modifier
+                    .weight(0.55f)
+                    .background(
+                        White,
+                        RoundedCornerShape(50.dp)
+                    )
+                    .border(
+                        1.dp,
+                        RoseStrong,
+                        RoundedCornerShape(50.dp)
+                    )
+                    .clickable {
+                        onDelete()
+                    }
+                    .padding(
+                        vertical = 10.dp
+                    ),
+
+                contentAlignment =
+                    Alignment.Center
+            ) {
+
+                Text(
+                    text = "Delete",
+                    color = Berry,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
