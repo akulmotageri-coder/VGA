@@ -110,7 +110,14 @@ class CallProcessingWorker(
             )
 
             // --------------------------------
-            // Keep original 16 kHz audio
+            // Keep ORIGINAL audio timeline
+            //
+            // IMPORTANT:
+            // Do NOT use trimLongSilences() here.
+            //
+            // The extracted voice must have the
+            // same duration and timestamps as
+            // the original call recording.
             // --------------------------------
 
             val originalSamples =
@@ -130,51 +137,30 @@ class CallProcessingWorker(
                 "Normalized samples=${normalized.size}"
             )
 
-            // --------------------------------
-            // Voice Activity Detection
-            // --------------------------------
-
-            val trimmed =
-                AudioPreprocessor.trimLongSilences(
-                    normalized
-                )
-
             Log.d(
                 "VGA_PROCESSING",
-                "After VAD: samples=${trimmed.size}"
+                "Original duration=" +
+                        "${normalized.size / 16000.0}s"
             )
-
-            if (trimmed.isEmpty()) {
-
-                Log.e(
-                    "VGA_PROCESSING",
-                    "No speech detected"
-                )
-
-                return Result.failure()
-            }
 
             // --------------------------------
-            // Save VAD output for debugging
+            // IMPORTANT
+            //
+            // We previously did:
+            //
+            // normalized -> VAD trim -> mel
+            //
+            // That changed the timeline.
+            //
+            // Now:
+            //
+            // normalized -> mel
+            //
+            // This keeps the original timestamps.
             // --------------------------------
 
-            val referenceFile =
-                File(
-                    applicationContext.filesDir,
-                    "android_vad_reference.wav"
-                )
-
-            AudioPreprocessor.saveFloatWav(
-                trimmed,
-                16000,
-                referenceFile
-            )
-
-            Log.d(
-                "VGA_PROCESSING",
-                "Reference WAV saved: " +
-                        referenceFile.absolutePath
-            )
+            val processingSamples =
+                normalized
 
             // --------------------------------
             // Mel spectrogram
@@ -187,7 +173,7 @@ class CallProcessingWorker(
 
             val mel =
                 MelSpectrogram.compute(
-                    trimmed
+                    processingSamples
                 )
 
             Log.d(
@@ -328,11 +314,15 @@ class CallProcessingWorker(
 
             // --------------------------------
             // Create sample-level mask
+            //
+            // IMPORTANT:
+            // Mask is now based on the ORIGINAL
+            // audio length.
             // --------------------------------
 
             val mask =
                 AudioMaskProcessor.createMask(
-                    trimmed.size,
+                    processingSamples.size,
                     confidences
                 )
 
@@ -377,7 +367,7 @@ class CallProcessingWorker(
 
             val separated =
                 AudioMaskProcessor.applyMask(
-                    trimmed,
+                    processingSamples,
                     finalMask
                 )
 
@@ -444,6 +434,12 @@ class CallProcessingWorker(
                 "VGA_OUTPUT",
                 "Output samples=" +
                         normalizedOutput.size
+            )
+
+            Log.d(
+                "VGA_OUTPUT",
+                "Output duration=" +
+                        "${normalizedOutput.size / 16000.0}s"
             )
 
             // --------------------------------
