@@ -1,10 +1,13 @@
+
 package com.example.vga.audioseparation
 
 import android.content.Context
 import android.media.MediaPlayer
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,21 +15,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -34,16 +38,39 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.vga.audioseparation.voice.VoiceInputScreen
 import java.io.File
+import java.util.Locale
+
+// ============================================================
+// COLORS
+// ============================================================
 
 private val WarmBackground = Color(0xFFF9F8F6)
+
 private val Berry = Color(0xFF9E2A4B)
+private val BerryDark = Color(0xFF7F203B)
+
 private val Slate = Color(0xFF2D3142)
 private val Muted = Color(0xFF6C727F)
+private val SoftMuted = Color(0xFF8D99AE)
+
 private val White = Color(0xFFFFFFFF)
+private val Border = Color(0xFFF1ECE7)
+
+private val Rose = Color(0xFFFFE5EC)
+private val RoseStrong = Color(0xFFFFCAD4)
+
+private val Blue = Color(0xFFE3F2FD)
+private val BlueText = Color(0xFF1E6091)
+
+private val Mint = Color(0xFFE6F4EA)
+private val MintText = Color(0xFF137333)
+
+private val Butter = Color(0xFFFFF3CD)
+private val ButterText = Color(0xFF854D0E)
 
 
 // ============================================================
-// AUDIO SEPARATION SCREEN
+// MAIN AUDIO SEPARATION SCREEN
 // ============================================================
 
 @Composable
@@ -63,9 +90,8 @@ fun AudioSeparationScreen(
         mutableStateOf(false)
     }
 
-
     // ========================================================
-    // VOICE INPUT
+    // NAVIGATION
     // ========================================================
 
     if (showVoiceInput) {
@@ -79,11 +105,6 @@ fun AudioSeparationScreen(
         return
     }
 
-
-    // ========================================================
-    // CALL RECORDINGS
-    // ========================================================
-
     if (showCallRecordings) {
 
         CallRecordingsScreen(
@@ -94,11 +115,6 @@ fun AudioSeparationScreen(
 
         return
     }
-
-
-    // ========================================================
-    // EXTRACTED VOICE
-    // ========================================================
 
     if (showExtractedVoice) {
 
@@ -111,295 +127,402 @@ fun AudioSeparationScreen(
         return
     }
 
-
     // ========================================================
-    // MAIN SCREEN
+    // HOME
     // ========================================================
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(WarmBackground)
-            .padding(horizontal = 20.dp)
+            .verticalScroll(
+                rememberScrollState()
+            )
+            .padding(
+                start = 20.dp,
+                end = 20.dp,
+                top = 28.dp,
+                bottom = 28.dp
+            )
     ) {
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-
-        // ----------------------------------------------------
-        // Top bar
-        // ----------------------------------------------------
+        // ====================================================
+        // TOP BAR
+        // ====================================================
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            IconButton(
+            CircleIconButton(
+                icon = "‹",
                 onClick = onBack
-            ) {
-
-                Text(
-                    text = "‹",
-                    color = Slate,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Light
-                )
-            }
+            )
 
             Spacer(
-                modifier = Modifier.width(4.dp)
+                modifier = Modifier.width(12.dp)
             )
 
-            Text(
-                text = "Audio Separation",
-                color = Slate,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Column {
+
+                Text(
+                    text = "Audio Separation",
+                    color = Slate,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier = Modifier.height(2.dp)
+                )
+
+                Text(
+                    text = "VGA · Voice Intelligence",
+                    color = SoftMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
 
-
+        // More breathing room below navigation
         Spacer(
-            modifier = Modifier.height(28.dp)
+            modifier = Modifier.height(38.dp)
         )
 
 
-        // ----------------------------------------------------
-        // Header
-        // ----------------------------------------------------
+        // ====================================================
+        // HERO SECTION
+        // ====================================================
 
-        Text(
-            text = "Keep your voice.",
-            color = Slate,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = "Leave the rest behind. ♡",
-            color = Muted,
-            fontSize = 16.sp
-        )
-
-
-        Spacer(
-            modifier = Modifier.height(28.dp)
-        )
-
-
-        // ----------------------------------------------------
-        // Your Voice
-        // ----------------------------------------------------
-
-        AudioFeatureCard(
-            title = "Your Voice",
-            description = "Record a clean sample of your voice.",
-            icon = "♪",
-            onClick = {
-                showVoiceInput = true
-            }
-        )
-
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-
-        // ----------------------------------------------------
-        // Call Recordings
-        // ----------------------------------------------------
-
-        AudioFeatureCard(
-            title = "Call Recordings",
-            description = "Add recordings that you want to process.",
-            icon = "♪",
-            onClick = {
-                showCallRecordings = true
-            }
-        )
-
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-
-        // ----------------------------------------------------
-        // Extracted Voice
-        // ----------------------------------------------------
-
-        AudioFeatureCard(
-            title = "Extracted Voice",
-            description = "Your processed recordings will appear here.",
-            icon = "♪",
-            onClick = {
-                showExtractedVoice = true
-            }
-        )
-    }
-}
-
-
-// ============================================================
-// EXTRACTED VOICE SCREEN
-// ============================================================
-
-@Composable
-fun ExtractedVoiceScreen(
-    onBack: () -> Unit
-) {
-
-    val context =
-        LocalContext.current
-
-
-    // --------------------------------------------------------
-    // Files
-    // --------------------------------------------------------
-
-    var files by remember {
-        mutableStateOf<List<File>>(emptyList())
-    }
-
-
-    // --------------------------------------------------------
-    // Currently playing file
-    // --------------------------------------------------------
-
-    var currentlyPlaying by remember {
-        mutableStateOf<String?>(null)
-    }
-
-
-    // --------------------------------------------------------
-    // MediaPlayer
-    // --------------------------------------------------------
-
-    val mediaPlayer =
-        remember {
-            MediaPlayer()
-        }
-
-
-    // --------------------------------------------------------
-    // Load files when screen opens
-    // --------------------------------------------------------
-
-    LaunchedEffect(Unit) {
-
-        files =
-            loadExtractedVoiceFiles(
-                context
-            )
-    }
-
-
-    // --------------------------------------------------------
-    // Cleanup MediaPlayer
-    // --------------------------------------------------------
-
-    DisposableEffect(Unit) {
-
-        onDispose {
-
-            try {
-
-                if (mediaPlayer.isPlaying) {
-                    mediaPlayer.stop()
-                }
-
-            } catch (_: Exception) {
-            }
-
-            mediaPlayer.release()
-        }
-    }
-
-
-    // ========================================================
-    // UI
-    // ========================================================
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(WarmBackground)
-            .padding(horizontal = 20.dp)
-    ) {
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-
-        // ----------------------------------------------------
-        // Top bar
-        // ----------------------------------------------------
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = White,
+                    shape = RoundedCornerShape(30.dp)
+                )
+                .border(
+                    width = 1.dp,
+                    color = Border,
+                    shape = RoundedCornerShape(30.dp)
+                )
+                .padding(23.dp)
         ) {
 
-            IconButton(
-                onClick = {
+            Column {
 
-                    stopPlayback(
-                        mediaPlayer
+                Row(
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Box(
+                        modifier = Modifier
+                            .size(9.dp)
+                            .background(
+                                Berry,
+                                CircleShape
+                            )
                     )
 
-                    currentlyPlaying = null
+                    Spacer(
+                        modifier = Modifier.width(8.dp)
+                    )
 
-                    onBack()
+                    Text(
+                        text = "VOICE SEPARATION",
+                        color = Berry,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.3.sp
+                    )
                 }
+
+                Spacer(
+                    modifier = Modifier.height(14.dp)
+                )
+
+                Text(
+                    text = "Keep your voice.",
+                    color = Slate,
+                    fontSize = 31.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 37.sp
+                )
+
+                Spacer(
+                    modifier = Modifier.height(3.dp)
+                )
+
+                Text(
+                    text = "Leave the rest behind. ♡",
+                    color = Muted,
+                    fontSize = 16.sp,
+                    lineHeight = 23.sp
+                )
+
+                Spacer(
+                    modifier = Modifier.height(20.dp)
+                )
+
+
+                // --------------------------------------------
+                // STATUS
+                // --------------------------------------------
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = Mint,
+                            shape = RoundedCornerShape(17.dp)
+                        )
+                        .padding(
+                            horizontal = 14.dp,
+                            vertical = 11.dp
+                        ),
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Text(
+                        text = "✓",
+                        color = MintText,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(9.dp)
+                    )
+
+                    Column {
+
+                        Text(
+                            text = "Voice profile ready",
+                            color = MintText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(2.dp)
+                        )
+
+                        Text(
+                            text = "Ready for speaker matching",
+                            color = MintText.copy(
+                                alpha = 0.68f
+                            ),
+                            fontSize = 10.sp
+                        )
+                    }
+
+                    Spacer(
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                White.copy(alpha = 0.75f),
+                                RoundedCornerShape(50.dp)
+                            )
+                            .padding(
+                                horizontal = 10.dp,
+                                vertical = 5.dp
+                            )
+                    ) {
+
+                        Text(
+                            text = "READY",
+                            color = MintText,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
+
+
+            // --------------------------------------------
+            // DECORATIVE MUSIC BUBBLE
+            // --------------------------------------------
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(55.dp)
+                    .background(
+                        Rose,
+                        CircleShape
+                    ),
+                contentAlignment =
+                    Alignment.Center
             ) {
 
                 Text(
-                    text = "‹",
-                    color = Slate,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Light
+                    text = "♫",
+                    color = Berry,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
-
-            Spacer(
-                modifier = Modifier.width(4.dp)
-            )
-
-            Text(
-                text = "Extracted Voice",
-                color = Slate,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
         }
 
 
         Spacer(
-            modifier = Modifier.height(28.dp)
+            modifier = Modifier.height(27.dp)
         )
 
 
-        // ----------------------------------------------------
-        // Header
-        // ----------------------------------------------------
+        // ====================================================
+        // YOUR VOICE
+        // ====================================================
 
-        Text(
-            text = "Your extracted voice.",
-            color = Slate,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold
+        SectionLabel(
+            text = "YOUR VOICE"
         )
 
-        Text(
-            text = "Processed recordings are stored here.",
-            color = Muted,
-            fontSize = 16.sp
+        Spacer(
+            modifier = Modifier.height(10.dp)
         )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Berry,
+                    RoundedCornerShape(25.dp)
+                )
+                .clickable {
+                    showVoiceInput = true
+                }
+                .padding(19.dp)
+        ) {
+
+            Row(
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .size(51.dp)
+                        .background(
+                            White.copy(alpha = 0.15f),
+                            CircleShape
+                        ),
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        text = "●",
+                        color = White,
+                        fontSize = 21.sp
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.width(14.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        text = "Your Voice",
+                        color = White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(3.dp)
+                    )
+
+                    Text(
+                        text = "Manage your reference voice",
+                        color = White.copy(
+                            alpha = 0.78f
+                        ),
+                        fontSize = 13.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(37.dp)
+                        .background(
+                            White,
+                            CircleShape
+                        ),
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        text = "→",
+                        color = Berry,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+
+        Spacer(
+            modifier = Modifier.height(27.dp)
+        )
+
+
+        // ====================================================
+        // PROCESS AUDIO
+        // ====================================================
+
+        SectionLabel(
+            text = "PROCESS AUDIO"
+        )
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement =
+                Arrangement.spacedBy(12.dp)
+        ) {
+
+            AudioActionCard(
+                modifier = Modifier.weight(1f),
+                title = "Call\nRecordings",
+                subtitle = "Process audio",
+                icon = "☎",
+                background = Blue,
+                iconColor = BlueText,
+                onClick = {
+                    showCallRecordings = true
+                }
+            )
+
+            AudioActionCard(
+                modifier = Modifier.weight(1f),
+                title = "Extracted\nVoice",
+                subtitle = "View results",
+                icon = "♫",
+                background = Rose,
+                iconColor = Berry,
+                onClick = {
+                    showExtractedVoice = true
+                }
+            )
+        }
 
 
         Spacer(
@@ -408,101 +531,116 @@ fun ExtractedVoiceScreen(
 
 
         // ====================================================
-        // FILE LIST
+        // HOW IT WORKS
         // ====================================================
 
-        if (files.isEmpty()) {
+        SectionLabel(
+            text = "HOW IT WORKS"
+        )
 
-            EmptyExtractedVoiceCard()
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
 
-        } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement =
+                Arrangement.spacedBy(8.dp)
+        ) {
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement =
-                    Arrangement.spacedBy(12.dp)
+            MiniStepCard(
+                number = "01",
+                title = "Record",
+                description = "Your voice",
+                background = Rose,
+                textColor = Berry,
+                modifier = Modifier.weight(1f)
+            )
+
+            MiniStepCard(
+                number = "02",
+                title = "Match",
+                description = "Speaker ID",
+                background = Blue,
+                textColor = BlueText,
+                modifier = Modifier.weight(1f)
+            )
+
+            MiniStepCard(
+                number = "03",
+                title = "Extract",
+                description = "Clean audio",
+                background = Mint,
+                textColor = MintText,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+
+        Spacer(
+            modifier = Modifier.height(22.dp)
+        )
+
+
+        // ====================================================
+        // PRIVATE INFO
+        // ====================================================
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Butter,
+                    RoundedCornerShape(19.dp)
+                )
+                .padding(14.dp),
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Box(
+                modifier = Modifier
+                    .size(35.dp)
+                    .background(
+                        White.copy(alpha = 0.75f),
+                        CircleShape
+                    ),
+                contentAlignment =
+                    Alignment.Center
             ) {
 
-                items(
-                    items = files,
-                    key = {
-                        it.absolutePath
-                    }
-                ) { file ->
+                Text(
+                    text = "⌂",
+                    color = ButterText,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
-                    ExtractedVoiceCard(
-                        file = file,
+            Spacer(
+                modifier = Modifier.width(11.dp)
+            )
 
-                        isPlaying =
-                            currentlyPlaying ==
-                                    file.absolutePath,
+            Column {
 
-                        onPlay = {
+                Text(
+                    text = "Private & local",
+                    color = ButterText,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-                            if (
-                                currentlyPlaying ==
-                                file.absolutePath
-                            ) {
+                Spacer(
+                    modifier = Modifier.height(2.dp)
+                )
 
-                                stopPlayback(
-                                    mediaPlayer
-                                )
-
-                                currentlyPlaying = null
-
-                            } else {
-
-                                try {
-
-                                    mediaPlayer.reset()
-
-                                    mediaPlayer.setDataSource(
-                                        file.absolutePath
-                                    )
-
-                                    mediaPlayer.prepare()
-
-                                    mediaPlayer.start()
-
-                                    currentlyPlaying =
-                                        file.absolutePath
-
-                                    mediaPlayer.setOnCompletionListener {
-
-                                        currentlyPlaying =
-                                            null
-                                    }
-
-                                } catch (_: Exception) {
-
-                                    currentlyPlaying = null
-                                }
-                            }
-                        },
-
-                        onDelete = {
-
-                            if (
-                                currentlyPlaying ==
-                                file.absolutePath
-                            ) {
-
-                                stopPlayback(
-                                    mediaPlayer
-                                )
-
-                                currentlyPlaying = null
-                            }
-
-                            file.delete()
-
-                            files =
-                                loadExtractedVoiceFiles(
-                                    context
-                                )
-                        }
-                    )
-                }
+                Text(
+                    text = "Your extracted audio stays on this device.",
+                    color = ButterText.copy(
+                        alpha = 0.72f
+                    ),
+                    fontSize = 11.sp
+                )
             }
         }
     }
@@ -510,7 +648,487 @@ fun ExtractedVoiceScreen(
 
 
 // ============================================================
-// EMPTY STATE
+// SECTION LABEL
+// ============================================================
+
+@Composable
+private fun SectionLabel(
+    text: String
+) {
+
+    Text(
+        text = text,
+        color = SoftMuted,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.ExtraBold,
+        letterSpacing = 1.3.sp
+    )
+}
+
+
+// ============================================================
+// CIRCLE ICON BUTTON
+// ============================================================
+
+@Composable
+private fun CircleIconButton(
+    icon: String,
+    onClick: () -> Unit
+) {
+
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(White)
+            .border(
+                width = 1.dp,
+                color = Border,
+                shape = CircleShape
+            )
+            .clickable {
+                onClick()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+
+        Text(
+            text = icon,
+            color = Slate,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Light
+        )
+    }
+}
+
+
+// ============================================================
+// AUDIO ACTION CARD
+// ============================================================
+
+@Composable
+private fun AudioActionCard(
+    modifier: Modifier,
+    title: String,
+    subtitle: String,
+    icon: String,
+    background: Color,
+    iconColor: Color,
+    onClick: () -> Unit
+) {
+
+    Column(
+        modifier = modifier
+            .background(
+                background,
+                RoundedCornerShape(24.dp)
+            )
+            .clickable {
+                onClick()
+            }
+            .padding(17.dp)
+    ) {
+
+        Box(
+            modifier = Modifier
+                .size(43.dp)
+                .background(
+                    White,
+                    CircleShape
+                ),
+            contentAlignment =
+                Alignment.Center
+        ) {
+
+            Text(
+                text = icon,
+                color = iconColor,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(17.dp)
+        )
+
+        Text(
+            text = title,
+            color = Slate,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 19.sp
+        )
+
+        Spacer(
+            modifier = Modifier.height(4.dp)
+        )
+
+        Text(
+            text = subtitle,
+            color = Muted,
+            fontSize = 11.sp
+        )
+
+        Spacer(
+            modifier = Modifier.height(14.dp)
+        )
+
+        Row(
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            Text(
+                text = "Open",
+                color = iconColor,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.width(5.dp)
+            )
+
+            Text(
+                text = "→",
+                color = iconColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+
+// ============================================================
+// MINI STEP CARD
+// ============================================================
+
+@Composable
+private fun MiniStepCard(
+    number: String,
+    title: String,
+    description: String,
+    background: Color,
+    textColor: Color,
+    modifier: Modifier
+) {
+
+    Column(
+        modifier = modifier
+            .background(
+                background,
+                RoundedCornerShape(19.dp)
+            )
+            .padding(12.dp)
+    ) {
+
+        Text(
+            text = number,
+            color = textColor.copy(alpha = 0.65f),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.ExtraBold
+        )
+
+        Spacer(
+            modifier = Modifier.height(8.dp)
+        )
+
+        Text(
+            text = title,
+            color = Slate,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(
+            modifier = Modifier.height(2.dp)
+        )
+
+        Text(
+            text = description,
+            color = Muted,
+            fontSize = 9.sp
+        )
+    }
+}
+
+
+// ============================================================
+// EXTRACTED VOICE SCREEN
+//
+// IMPORTANT:
+// Keep this function HERE.
+// Do NOT create another ExtractedVoiceScreen.kt.
+// ============================================================
+
+@Composable
+fun ExtractedVoiceScreen(
+    onBack: () -> Unit
+) {
+
+    val context = LocalContext.current
+
+    var files by remember {
+        mutableStateOf(
+            loadExtractedVoiceFiles(context)
+        )
+    }
+
+    var currentlyPlaying by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val mediaPlayer = remember {
+        MediaPlayer()
+    }
+
+    DisposableEffect(Unit) {
+
+        onDispose {
+
+            try {
+                if (mediaPlayer.isPlaying) {
+                    mediaPlayer.stop()
+                }
+            } catch (_: Exception) {
+            }
+
+            mediaPlayer.release()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(WarmBackground)
+            .verticalScroll(
+                rememberScrollState()
+            )
+            .padding(
+                start = 20.dp,
+                end = 20.dp,
+                top = 28.dp,
+                bottom = 28.dp
+            )
+    ) {
+
+        // ====================================================
+        // TOP BAR
+        // ====================================================
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment =
+                Alignment.CenterVertically
+        ) {
+
+            CircleIconButton(
+                icon = "‹",
+                onClick = {
+
+                    try {
+                        if (mediaPlayer.isPlaying) {
+                            mediaPlayer.stop()
+                        }
+                    } catch (_: Exception) {
+                    }
+
+                    currentlyPlaying = null
+
+                    onBack()
+                }
+            )
+
+            Spacer(
+                modifier = Modifier.width(12.dp)
+            )
+
+            Column {
+
+                Text(
+                    text = "Extracted Voice",
+                    color = Slate,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(
+                    modifier = Modifier.height(2.dp)
+                )
+
+                Text(
+                    text = "Your processed recordings",
+                    color = SoftMuted,
+                    fontSize = 11.sp
+                )
+            }
+        }
+
+
+        Spacer(
+            modifier = Modifier.height(38.dp)
+        )
+
+
+        // ====================================================
+        // HEADER
+        // ====================================================
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    White,
+                    RoundedCornerShape(28.dp)
+                )
+                .border(
+                    1.dp,
+                    Border,
+                    RoundedCornerShape(28.dp)
+                )
+                .padding(22.dp)
+        ) {
+
+            Column {
+
+                Text(
+                    text = "Your extracted voice.",
+                    color = Slate,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 34.sp
+                )
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    text = "Clean voice recordings created by VGA.",
+                    color = Muted,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+
+                Spacer(
+                    modifier = Modifier.height(17.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .background(
+                            Rose,
+                            RoundedCornerShape(50.dp)
+                        )
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 7.dp
+                        ),
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Text(
+                        text = "♫",
+                        color = Berry,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(6.dp)
+                    )
+
+                    Text(
+                        text = "${files.size} recording(s)",
+                        color = Berry,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+
+        Spacer(
+            modifier = Modifier.height(22.dp)
+        )
+
+
+        // ====================================================
+        // REFRESH FILE LIST
+        // ====================================================
+
+        files = loadExtractedVoiceFiles(context)
+
+        if (files.isEmpty()) {
+
+            EmptyExtractedVoiceCard()
+
+        } else {
+
+            files.forEach { file ->
+
+                ExtractedVoiceCard(
+                    file = file,
+                    isPlaying =
+                        currentlyPlaying ==
+                                file.absolutePath,
+                    onPlay = {
+
+                        try {
+
+                            if (
+                                currentlyPlaying ==
+                                file.absolutePath
+                            ) {
+
+                                if (mediaPlayer.isPlaying) {
+                                    mediaPlayer.stop()
+                                }
+
+                                currentlyPlaying = null
+
+                            } else {
+
+                                mediaPlayer.reset()
+
+                                mediaPlayer.setDataSource(
+                                    file.absolutePath
+                                )
+
+                                mediaPlayer.prepare()
+
+                                mediaPlayer.start()
+
+                                currentlyPlaying =
+                                    file.absolutePath
+
+                                mediaPlayer.setOnCompletionListener {
+                                    currentlyPlaying = null
+                                }
+                            }
+
+                        } catch (_: Exception) {
+
+                            currentlyPlaying = null
+                        }
+                    }
+                )
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+            }
+        }
+    }
+}
+
+
+// ============================================================
+// EMPTY EXTRACTED VOICE
 // ============================================================
 
 @Composable
@@ -520,16 +1138,44 @@ private fun EmptyExtractedVoiceCard() {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = White,
-                shape = RoundedCornerShape(22.dp)
+                White,
+                RoundedCornerShape(25.dp)
             )
-            .padding(24.dp),
+            .border(
+                1.dp,
+                Border,
+                RoundedCornerShape(25.dp)
+            )
+            .padding(25.dp),
         horizontalAlignment =
             Alignment.CenterHorizontally
     ) {
 
+        Box(
+            modifier = Modifier
+                .size(60.dp)
+                .background(
+                    Rose,
+                    CircleShape
+                ),
+            contentAlignment =
+                Alignment.Center
+        ) {
+
+            Text(
+                text = "♫",
+                color = Berry,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(14.dp)
+        )
+
         Text(
-            text = "No extracted recordings yet.",
+            text = "No extracted recordings yet",
             color = Slate,
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold
@@ -540,10 +1186,10 @@ private fun EmptyExtractedVoiceCard() {
         )
 
         Text(
-            text =
-                "Share a call recording with VGA to process it.",
+            text = "Process a call recording and your\nvoice-only audio will appear here.",
             color = Muted,
-            fontSize = 14.sp
+            fontSize = 13.sp,
+            lineHeight = 19.sp
         )
     }
 }
@@ -557,119 +1203,119 @@ private fun EmptyExtractedVoiceCard() {
 private fun ExtractedVoiceCard(
     file: File,
     isPlaying: Boolean,
-    onPlay: () -> Unit,
-    onDelete: () -> Unit
+    onPlay: () -> Unit
 ) {
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = White,
-                shape = RoundedCornerShape(22.dp)
+                White,
+                RoundedCornerShape(23.dp)
             )
-            .padding(20.dp)
+            .border(
+                1.dp,
+                Border,
+                RoundedCornerShape(23.dp)
+            )
+            .padding(17.dp),
+        verticalAlignment =
+            Alignment.CenterVertically
     ) {
 
-        // ----------------------------------------------------
-        // File information
-        // ----------------------------------------------------
-
-        Text(
-            text = file.name,
-            color = Slate,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(
-            modifier = Modifier.height(5.dp)
-        )
-
-        Text(
-            text = formatFileSize(
-                file.length()
-            ),
-            color = Muted,
-            fontSize = 13.sp
-        )
-
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
-
-        // ----------------------------------------------------
-        // Buttons
-        // ----------------------------------------------------
-
-        Row(
-            verticalAlignment =
-                Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    if (isPlaying) Berry else Rose,
+                    CircleShape
+                ),
+            contentAlignment =
+                Alignment.Center
         ) {
 
             Text(
                 text =
-                    if (isPlaying) {
-                        "Stop"
-                    } else {
-                        "Play"
-                    },
+                    if (isPlaying)
+                        "■"
+                    else
+                        "♫",
 
-                color = Berry,
+                color =
+                    if (isPlaying)
+                        White
+                    else
+                        Berry,
 
-                fontSize = 14.sp,
-
-                fontWeight =
-                    FontWeight.Bold,
-
-                modifier = Modifier
-                    .clickable {
-                        onPlay()
-                    }
-                    .background(
-                        color =
-                            Color(0xFFFFE5EC),
-                        shape =
-                            RoundedCornerShape(50.dp)
-                    )
-                    .padding(
-                        horizontal = 18.dp,
-                        vertical = 10.dp
-                    )
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold
             )
+        }
 
+        Spacer(
+            modifier = Modifier.width(13.dp)
+        )
 
-            Spacer(
-                modifier = Modifier.width(10.dp)
-            )
-
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
 
             Text(
-                text = "Delete",
-
-                color = Muted,
-
+                text = file.name,
+                color = Slate,
                 fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
 
-                fontWeight =
-                    FontWeight.Bold,
+            Spacer(
+                modifier = Modifier.height(4.dp)
+            )
 
-                modifier = Modifier
-                    .clickable {
-                        onDelete()
-                    }
-                    .background(
-                        color =
-                            Color(0xFFF1F1F1),
-                        shape =
-                            RoundedCornerShape(50.dp)
-                    )
-                    .padding(
-                        horizontal = 18.dp,
-                        vertical = 10.dp
-                    )
+            Text(
+                text = formatFileSize(file.length()),
+                color = SoftMuted,
+                fontSize = 11.sp
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.width(8.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .background(
+                    if (isPlaying)
+                        Berry
+                    else
+                        Rose,
+                    RoundedCornerShape(50.dp)
+                )
+                .clickable {
+                    onPlay()
+                }
+                .padding(
+                    horizontal = 14.dp,
+                    vertical = 9.dp
+                )
+        ) {
+
+            Text(
+                text =
+                    if (isPlaying)
+                        "Stop"
+                    else
+                        "Play",
+
+                color =
+                    if (isPlaying)
+                        White
+                    else
+                        Berry,
+
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -691,16 +1337,12 @@ private fun loadExtractedVoiceFiles(
         )
 
     if (!directory.exists()) {
-
-        directory.mkdirs()
-
         return emptyList()
     }
 
     return directory
         .listFiles()
         ?.filter {
-
             it.isFile &&
                     it.extension.equals(
                         "wav",
@@ -715,30 +1357,6 @@ private fun loadExtractedVoiceFiles(
 
 
 // ============================================================
-// STOP PLAYBACK
-// ============================================================
-
-private fun stopPlayback(
-    mediaPlayer: MediaPlayer
-) {
-
-    try {
-
-        if (mediaPlayer.isPlaying) {
-            mediaPlayer.stop()
-        }
-
-    } catch (_: Exception) {
-    }
-
-    try {
-        mediaPlayer.reset()
-    } catch (_: Exception) {
-    }
-}
-
-
-// ============================================================
 // FILE SIZE
 // ============================================================
 
@@ -748,95 +1366,19 @@ private fun formatFileSize(
 
     return when {
 
-        bytes < 1024 -> {
+        bytes < 1024 ->
             "$bytes B"
-        }
 
-        bytes < 1024 * 1024 -> {
+        bytes < 1024 * 1024 ->
             "${bytes / 1024} KB"
-        }
 
-        else -> {
+        else ->
             String.format(
+                Locale.US,
                 "%.2f MB",
                 bytes /
                         (1024.0 * 1024.0)
             )
-        }
     }
 }
 
-
-// ============================================================
-// FEATURE CARD
-// ============================================================
-
-@Composable
-private fun AudioFeatureCard(
-    title: String,
-    description: String,
-    icon: String,
-    onClick: (() -> Unit)? = null
-) {
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = White,
-                shape = RoundedCornerShape(22.dp)
-            )
-            .then(
-
-                if (onClick != null) {
-
-                    Modifier.clickable {
-                        onClick()
-                    }
-
-                } else {
-
-                    Modifier
-                }
-            )
-            .padding(20.dp),
-
-        verticalAlignment =
-            Alignment.CenterVertically
-    ) {
-
-        Text(
-            text = icon,
-            color = Berry,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(
-            modifier = Modifier.width(14.dp)
-        )
-
-        Column(
-            verticalArrangement =
-                Arrangement.Center
-        ) {
-
-            Text(
-                text = title,
-                color = Slate,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
-
-            Text(
-                text = description,
-                color = Muted,
-                fontSize = 14.sp
-            )
-        }
-    }
-}

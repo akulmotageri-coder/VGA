@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("com.github.gkonovalov.android-vad:webrtc:2.0.10")
     implementation("androidx.work:work-runtime-ktx:2.10.1")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
