@@ -14,8 +14,9 @@ class CallProcessingWorker(
 
     override suspend fun doWork(): Result {
 
-        val inputPath = inputData.getString("input_path")
-            ?: return Result.failure()
+        val inputPath =
+            inputData.getString("input_path")
+                ?: return Result.failure()
 
         return try {
 
@@ -33,7 +34,8 @@ class CallProcessingWorker(
                 "Input: $inputPath"
             )
 
-            val file = File(inputPath)
+            val file =
+                File(inputPath)
 
             if (!file.exists()) {
 
@@ -44,6 +46,36 @@ class CallProcessingWorker(
 
                 return Result.failure()
             }
+
+            // --------------------------------
+            // Load saved reference embedding
+            // --------------------------------
+
+            val referenceEmbedding =
+                ReferenceVoiceManager.loadEmbedding(
+                    applicationContext
+                )
+
+            if (referenceEmbedding == null) {
+
+                Log.e(
+                    "VGA_MATCH",
+                    "No reference voice embedding found"
+                )
+
+                return Result.failure()
+            }
+
+            Log.d(
+                "VGA_MATCH",
+                "Reference embedding loaded"
+            )
+
+            Log.d(
+                "VGA_MATCH",
+                "Reference embedding size=" +
+                        referenceEmbedding.size
+            )
 
             // --------------------------------
             // Read original WAV
@@ -65,7 +97,9 @@ class CallProcessingWorker(
             // --------------------------------
 
             val audio16k =
-                AudioPreprocessor.resampleTo16k(audio)
+                AudioPreprocessor.resampleTo16k(
+                    audio
+                )
 
             Log.d(
                 "VGA_PROCESSING",
@@ -76,12 +110,19 @@ class CallProcessingWorker(
             )
 
             // --------------------------------
-            // Normalize volume
+            // Keep original 16 kHz audio
+            // --------------------------------
+
+            val originalSamples =
+                audio16k.samples.copyOf()
+
+            // --------------------------------
+            // Normalize for speaker matching
             // --------------------------------
 
             val normalized =
                 AudioPreprocessor.normalizeVolume(
-                    audio16k.samples
+                    originalSamples
                 )
 
             Log.d(
@@ -90,7 +131,7 @@ class CallProcessingWorker(
             )
 
             // --------------------------------
-            // WebRTC VAD + silence trimming
+            // Voice Activity Detection
             // --------------------------------
 
             val trimmed =
@@ -103,8 +144,18 @@ class CallProcessingWorker(
                 "After VAD: samples=${trimmed.size}"
             )
 
+            if (trimmed.isEmpty()) {
+
+                Log.e(
+                    "VGA_PROCESSING",
+                    "No speech detected"
+                )
+
+                return Result.failure()
+            }
+
             // --------------------------------
-            // Save VAD output for reference
+            // Save VAD output for debugging
             // --------------------------------
 
             val referenceFile =
@@ -135,7 +186,9 @@ class CallProcessingWorker(
             )
 
             val mel =
-                MelSpectrogram.compute(trimmed)
+                MelSpectrogram.compute(
+                    trimmed
+                )
 
             Log.d(
                 "VGA_PROCESSING",
@@ -143,34 +196,37 @@ class CallProcessingWorker(
                         "frames=${mel.size}"
             )
 
-            // --------------------------------
-            // Mel summary
-            // --------------------------------
-
             MelSpectrogram.logSummary(
                 mel,
                 applicationContext
             )
 
             // --------------------------------
-            // Split mel into 160 × 40 chunks
+            // Create 160 × 40 chunks
             // --------------------------------
 
             val chunks =
-                MelChunker.chunk(mel)
-
-            MelChunker.logSummary(chunks)
-
-            // --------------------------------
-            // Verify first chunk
-            // --------------------------------
-
-            if (chunks.isNotEmpty()) {
-
-                MelChunker.logFirstChunk(
-                    chunks[0]
+                MelChunker.chunk(
+                    mel
                 )
+
+            MelChunker.logSummary(
+                chunks
+            )
+
+            if (chunks.isEmpty()) {
+
+                Log.e(
+                    "VGA_PROCESSING",
+                    "No valid mel chunks"
+                )
+
+                return Result.failure()
             }
+
+            MelChunker.logFirstChunk(
+                chunks[0]
+            )
 
             // --------------------------------
             // Generate speaker embeddings
@@ -178,6 +234,9 @@ class CallProcessingWorker(
 
             val embeddings =
                 ArrayList<FloatArray>()
+
+            val confidences =
+                ArrayList<Float>()
 
             SpeakerEncoder(
                 applicationContext
@@ -188,15 +247,25 @@ class CallProcessingWorker(
                     val chunk =
                         chunks[index]
 
+                    // --------------------------------
+                    // Encode chunk
+                    // --------------------------------
+
                     val currentEmbedding =
-                        encoder.encode(chunk)
+                        encoder.encode(
+                            chunk
+                        )
 
                     embeddings.add(
                         currentEmbedding
                     )
 
+                    // --------------------------------
                     // Calculate embedding norm
-                    var normSquared = 0.0
+                    // --------------------------------
+
+                    var normSquared =
+                        0.0
 
                     for (value in currentEmbedding) {
 
@@ -217,23 +286,169 @@ class CallProcessingWorker(
 
                     Log.d(
                         "VGA_EMBEDDING",
+                        "Chunk $index: norm=$norm"
+                    )
+
+                    // --------------------------------
+                    // Compare with reference voice
+                    // --------------------------------
+
+                    val similarity =
+                        VoiceMatcher.cosineSimilarity(
+                            referenceEmbedding,
+                            currentEmbedding
+                        )
+
+                    val confidence =
+                        VoiceMatcher.similarityToConfidence(
+                            similarity
+                        )
+
+                    confidences.add(
+                        confidence
+                    )
+
+                    Log.d(
+                        "VGA_MATCH",
                         "Chunk $index: " +
-                                "norm=$norm"
+                                "similarity=$similarity, " +
+                                "confidence=$confidence"
                     )
                 }
             }
 
             // --------------------------------
-            // Embedding summary
+            // Confidence summary
             // --------------------------------
 
             Log.d(
-                "VGA_EMBEDDING",
-                "Total embeddings=${embeddings.size}"
+                "VGA_MATCH",
+                "Confidence values=${confidences.size}"
             )
+
             // --------------------------------
-// Create call-level embedding
-// --------------------------------
+            // Create sample-level mask
+            // --------------------------------
+
+            val mask =
+                AudioMaskProcessor.createMask(
+                    trimmed.size,
+                    confidences
+                )
+
+            Log.d(
+                "VGA_MASK",
+                "Mask created: samples=${mask.size}"
+            )
+
+            // --------------------------------
+            // Smooth mask
+            // --------------------------------
+
+            val smoothedMask =
+                AudioMaskProcessor.smoothMask(
+                    mask,
+                    200
+                )
+
+            Log.d(
+                "VGA_MASK",
+                "Mask smoothing completed"
+            )
+
+            // --------------------------------
+            // Fade protection
+            // --------------------------------
+
+            val finalMask =
+                AudioMaskProcessor.applyFadeProtection(
+                    smoothedMask,
+                    150
+                )
+
+            Log.d(
+                "VGA_MASK",
+                "Fade protection completed"
+            )
+
+            // --------------------------------
+            // Apply voice mask
+            // --------------------------------
+
+            val separated =
+                AudioMaskProcessor.applyMask(
+                    trimmed,
+                    finalMask
+                )
+
+            // --------------------------------
+            // Normalize separated audio
+            // --------------------------------
+
+            val normalizedOutput =
+                AudioMaskProcessor.normalizeOutput(
+                    separated
+                )
+
+            // --------------------------------
+            // Save into extracted_voice
+            // --------------------------------
+
+            val extractedVoiceDirectory =
+                File(
+                    applicationContext.filesDir,
+                    "extracted_voice"
+                )
+
+            if (!extractedVoiceDirectory.exists()) {
+
+                val created =
+                    extractedVoiceDirectory.mkdirs()
+
+                Log.d(
+                    "VGA_OUTPUT",
+                    "Created extracted_voice directory=$created"
+                )
+            }
+
+            // --------------------------------
+            // Unique output filename
+            // --------------------------------
+
+            val timestamp =
+                System.currentTimeMillis()
+
+            val outputFile =
+                File(
+                    extractedVoiceDirectory,
+                    "my_voice_only_$timestamp.wav"
+                )
+
+            // --------------------------------
+            // Save WAV
+            // --------------------------------
+
+            AudioPreprocessor.saveFloatWav(
+                normalizedOutput,
+                16000,
+                outputFile
+            )
+
+            Log.d(
+                "VGA_OUTPUT",
+                "Voice-only audio saved: " +
+                        outputFile.absolutePath
+            )
+
+            Log.d(
+                "VGA_OUTPUT",
+                "Output samples=" +
+                        normalizedOutput.size
+            )
+
+            // --------------------------------
+            // Call-level embedding
+            // --------------------------------
 
             if (embeddings.isNotEmpty()) {
 
@@ -249,57 +464,26 @@ class CallProcessingWorker(
 
                 Log.d(
                     "VGA_EMBEDDING",
-                    "Call embedding size=${callEmbedding.size}"
+                    "Call embedding size=" +
+                            callEmbedding.size
                 )
 
                 Log.d(
                     "VGA_EMBEDDING",
-                    "Call embedding norm=$callNorm"
+                    "Call embedding norm=" +
+                            callNorm
                 )
 
-                Log.d(
-                    "VGA_EMBEDDING",
-                    "Call embedding first10=" +
-                            callEmbedding
-                                .take(10)
-                                .joinToString(" ")
-                )
-            }
-
-            if (embeddings.isNotEmpty()) {
-
-                val firstEmbedding =
-                    embeddings[0]
+                val callSimilarity =
+                    VoiceMatcher.cosineSimilarity(
+                        referenceEmbedding,
+                        callEmbedding
+                    )
 
                 Log.d(
-                    "VGA_EMBEDDING",
-                    "First embedding size=" +
-                            firstEmbedding.size
-                )
-
-                Log.d(
-                    "VGA_EMBEDDING",
-                    "First10=" +
-                            firstEmbedding
-                                .take(10)
-                                .joinToString(" ")
-                )
-
-                var normSquared = 0.0
-
-                for (value in firstEmbedding) {
-
-                    normSquared +=
-                        value.toDouble() *
-                                value.toDouble()
-                }
-
-                val norm =
-                    sqrt(normSquared)
-
-                Log.d(
-                    "VGA_EMBEDDING",
-                    "First embedding norm=$norm"
+                    "VGA_MATCH",
+                    "Call-level similarity=" +
+                            callSimilarity
                 )
             }
 
@@ -309,7 +493,7 @@ class CallProcessingWorker(
 
             Log.d(
                 "VGA_PROCESSING",
-                "Preprocessing completed successfully"
+                "Voice separation completed successfully"
             )
 
             Result.success()
