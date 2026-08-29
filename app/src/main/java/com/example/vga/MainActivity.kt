@@ -24,6 +24,17 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+        val openSmileTest = OpenSmileTest(this)
+
+        val success = openSmileTest.initialize()
+        if (success) {
+            openSmileTest.sendTestAudio()
+        }
+
+        android.util.Log.d(
+            "OpenSMILE_TEST",
+            "Initialization result = $success"
+        )
     }
 }
 

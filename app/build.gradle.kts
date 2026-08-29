@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation(files("libs/opensmile-debug.aar"))
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.github.gkonovalov.android-vad:webrtc:2.0.10")
     implementation("androidx.work:work-runtime-ktx:2.10.1")
