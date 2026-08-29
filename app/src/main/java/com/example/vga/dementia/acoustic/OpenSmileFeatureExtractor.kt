@@ -138,7 +138,7 @@ class OpenSmileFeatureExtractor(
              * 1600 samples =
              * 100 ms at 16 kHz.
              */
-            val chunkSize = 3200
+            val chunkSize = 1600
             var offset = 0
 
             while (offset < pcmBytes.size) {

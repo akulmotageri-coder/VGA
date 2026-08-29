@@ -562,32 +562,58 @@ class OpenSmileTest(private val context: Context) {
         audio: ByteArray
     ): Boolean {
 
+        val currentSmile = smile
+
+        if (currentSmile == null) {
+            Log.e(
+                "OpenSMILE_TEST",
+                "Cannot write PCM: OpenSMILE is not initialized"
+            )
+            return false
+        }
+
         return try {
 
-            val currentSmile = smile
+            var attempts = 0
+            val maxAttempts = 500
 
-            if (currentSmile == null) {
+            while (attempts < maxAttempts) {
+
+                val result =
+                    currentSmile.smile_extaudiosource_write_data(
+                        "externalAudioSource",
+                        audio
+                    )
+
+                if (result.toString() == "SMILE_SUCCESS") {
+                    return true
+                }
+
+                if (result.toString() == "SMILE_NOT_WRITTEN") {
+
+                    attempts++
+
+                    // Give OpenSMILE processing thread time
+                    // to consume data from the external source.
+                    Thread.sleep(10)
+
+                    continue
+                }
 
                 Log.e(
                     "OpenSMILE_TEST",
-                    "Cannot write PCM: OpenSMILE is not initialized"
+                    "PCM write failed: $result"
                 )
 
                 return false
             }
 
-            val result =
-                currentSmile.smile_extaudiosource_write_data(
-                    "externalAudioSource",
-                    audio
-                )
-
-            Log.d(
+            Log.e(
                 "OpenSMILE_TEST",
-                "PCM write: ${audio.size} bytes -> $result"
+                "PCM write timed out after $maxAttempts attempts"
             )
 
-            result.toString() == "SMILE_SUCCESS"
+            false
 
         } catch (e: Exception) {
 

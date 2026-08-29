@@ -1,5 +1,6 @@
 package com.example.vga.audioseparation.processing
 
+import com.example.vga.dementia.acoustic.AcousticAnalysisManager
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
@@ -429,6 +430,49 @@ class CallProcessingWorker(
                 "Voice-only audio saved: " +
                         outputFile.absolutePath
             )
+            // --------------------------------
+// Acoustic feature extraction
+// --------------------------------
+
+            Log.d(
+                "VGA_ACOUSTIC",
+                "Starting eGeMAPSv02 acoustic analysis"
+            )
+
+            val acousticAnalysisManager =
+                AcousticAnalysisManager(
+                    applicationContext
+                )
+
+            val acousticFeatures =
+                acousticAnalysisManager.analyze(
+                    outputFile
+                )
+
+            if (acousticFeatures == null) {
+
+                Log.e(
+                    "VGA_ACOUSTIC",
+                    "Acoustic feature extraction failed"
+                )
+
+            } else {
+
+                Log.d(
+                    "VGA_ACOUSTIC",
+                    "Acoustic feature extraction successful"
+                )
+
+                Log.d(
+                    "VGA_ACOUSTIC",
+                    "Feature count=${acousticFeatures.size}"
+                )
+
+                Log.d(
+                    "VGA_ACOUSTIC",
+                    "Features=${acousticFeatures.values.contentToString()}"
+                )
+            }
 
             Log.d(
                 "VGA_OUTPUT",
