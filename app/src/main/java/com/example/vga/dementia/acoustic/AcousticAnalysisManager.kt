@@ -28,18 +28,20 @@ class AcousticAnalysisManager(
         )
 
         if (!voiceFile.exists()) {
+
             Log.e(
                 TAG,
                 "Voice file does not exist"
             )
+
             return null
         }
 
         return try {
 
-            // -----------------------------------------
-            // Decode extracted voice
-            // -----------------------------------------
+            // ------------------------------------------------
+            // DECODE AUDIO
+            // ------------------------------------------------
 
             val audio =
                 AudioDecoder.decodeToMonoFloat(
@@ -54,9 +56,9 @@ class AcousticAnalysisManager(
                         "channels=${audio.channels}"
             )
 
-            // -----------------------------------------
-            // Extract eGeMAPSv02 features
-            // -----------------------------------------
+            // ------------------------------------------------
+            // EXTRACT eGeMAPSv02 FEATURES
+            // ------------------------------------------------
 
             val values =
                 OpenSmileFeatureExtractor(
@@ -75,13 +77,26 @@ class AcousticAnalysisManager(
 
             Log.d(
                 TAG,
-                "Acoustic features extracted: " +
-                        "${values.size}"
+                "Acoustic features extracted: ${values.size}"
             )
 
-            // -----------------------------------------
-            // Wrap in AcousticFeatures
-            // -----------------------------------------
+            // ------------------------------------------------
+            // SAVE FEATURES PERMANENTLY
+            // ------------------------------------------------
+
+            AcousticFeatureStore.save(
+                context = context,
+                features = values
+            )
+
+            Log.d(
+                TAG,
+                "Acoustic features saved successfully"
+            )
+
+            // ------------------------------------------------
+            // RETURN FEATURES
+            // ------------------------------------------------
 
             AcousticFeatures(
                 values = values
@@ -108,10 +123,12 @@ class AcousticAnalysisManager(
             )
 
         if (!directory.exists()) {
+
             Log.e(
                 TAG,
                 "extracted_voice directory does not exist"
             )
+
             return null
         }
 
@@ -119,6 +136,7 @@ class AcousticAnalysisManager(
             directory
                 .listFiles()
                 ?.filter {
+
                     it.isFile &&
                             it.extension.equals(
                                 "wav",
@@ -126,6 +144,7 @@ class AcousticAnalysisManager(
                             )
                 }
                 ?.maxByOrNull {
+
                     it.lastModified()
                 }
 
@@ -145,6 +164,39 @@ class AcousticAnalysisManager(
                     latestFile.absolutePath
         )
 
-        return analyze(latestFile)
+        return analyze(
+            latestFile
+        )
+    }
+
+    // --------------------------------------------------------
+    // LOAD SAVED FEATURES
+    // --------------------------------------------------------
+
+    fun loadSavedFeatures(): AcousticFeatures? {
+
+        val values =
+            AcousticFeatureStore.get(
+                context
+            )
+
+        if (values == null) {
+
+            Log.d(
+                TAG,
+                "No saved acoustic features found"
+            )
+
+            return null
+        }
+
+        Log.d(
+            TAG,
+            "Loaded ${values.size} saved acoustic features"
+        )
+
+        return AcousticFeatures(
+            values = values
+        )
     }
 }

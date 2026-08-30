@@ -21,9 +21,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +39,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.vga.audioseparation.voice.VoiceInputScreen
+import com.example.vga.dementia.acoustic.AcousticFeatureStore
+import com.example.vga.ui.FeatureListScreen
 import java.io.File
 import java.util.Locale
-import androidx.compose.material3.AlertDialog
 
 // ============================================================
 // COLORS
@@ -79,6 +82,12 @@ fun AudioSeparationScreen(
     onBack: () -> Unit
 ) {
 
+    // ========================================================
+    // CONTEXT
+    // ========================================================
+
+    val context = LocalContext.current
+
     var showVoiceInput by remember {
         mutableStateOf(false)
     }
@@ -88,6 +97,10 @@ fun AudioSeparationScreen(
     }
 
     var showExtractedVoice by remember {
+        mutableStateOf(false)
+    }
+
+    var showFeatureList by remember {
         mutableStateOf(false)
     }
 
@@ -122,6 +135,22 @@ fun AudioSeparationScreen(
         ExtractedVoiceScreen(
             onBack = {
                 showExtractedVoice = false
+            }
+        )
+
+        return
+    }
+
+    if (showFeatureList) {
+
+        // FIX: pass context
+        val features =
+            AcousticFeatureStore.get(context)
+
+        FeatureListScreen(
+            features = features?.toList() ?: emptyList(),
+            onBack = {
+                showFeatureList = false
             }
         )
 
@@ -187,7 +216,6 @@ fun AudioSeparationScreen(
             }
         }
 
-        // More breathing room below navigation
         Spacer(
             modifier = Modifier.height(38.dp)
         )
@@ -268,11 +296,6 @@ fun AudioSeparationScreen(
                     modifier = Modifier.height(20.dp)
                 )
 
-
-                // --------------------------------------------
-                // STATUS
-                // --------------------------------------------
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -347,11 +370,6 @@ fun AudioSeparationScreen(
                 }
             }
 
-
-            // --------------------------------------------
-            // DECORATIVE MUSIC BUBBLE
-            // --------------------------------------------
-
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -372,7 +390,6 @@ fun AudioSeparationScreen(
                 )
             }
         }
-
 
         Spacer(
             modifier = Modifier.height(27.dp)
@@ -476,7 +493,6 @@ fun AudioSeparationScreen(
             }
         }
 
-
         Spacer(
             modifier = Modifier.height(27.dp)
         )
@@ -525,6 +541,99 @@ fun AudioSeparationScreen(
             )
         }
 
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
+
+
+        // ====================================================
+        // ACOUSTIC FEATURES
+        // ====================================================
+
+        SectionLabel(
+            text = "VOICE ANALYSIS"
+        )
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    White,
+                    RoundedCornerShape(22.dp)
+                )
+                .border(
+                    1.dp,
+                    Border,
+                    RoundedCornerShape(22.dp)
+                )
+                .clickable {
+                    showFeatureList = true
+                }
+                .padding(17.dp)
+        ) {
+
+            Row(
+                verticalAlignment =
+                    Alignment.CenterVertically
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .size(45.dp)
+                        .background(
+                            Butter,
+                            CircleShape
+                        ),
+                    contentAlignment =
+                        Alignment.Center
+                ) {
+
+                    Text(
+                        text = "≋",
+                        color = ButterText,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(
+                    modifier = Modifier.width(13.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    Text(
+                        text = "Acoustic Features",
+                        color = Slate,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(3.dp)
+                    )
+
+                    Text(
+                        text = "View extracted eGeMAPSv02 features",
+                        color = Muted,
+                        fontSize = 11.sp
+                    )
+                }
+
+                Text(
+                    text = "→",
+                    color = Berry,
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
 
         Spacer(
             modifier = Modifier.height(24.dp)
@@ -576,7 +685,6 @@ fun AudioSeparationScreen(
                 modifier = Modifier.weight(1f)
             )
         }
-
 
         Spacer(
             modifier = Modifier.height(22.dp)
@@ -636,7 +744,8 @@ fun AudioSeparationScreen(
                 )
 
                 Text(
-                    text = "Your extracted audio stays on this device.",
+                    text =
+                        "Your extracted audio stays on this device.",
                     color = ButterText.copy(
                         alpha = 0.72f
                     ),
@@ -858,10 +967,6 @@ private fun MiniStepCard(
 
 // ============================================================
 // EXTRACTED VOICE SCREEN
-//
-// IMPORTANT:
-// Keep this function HERE.
-// Do NOT create another ExtractedVoiceScreen.kt.
 // ============================================================
 
 @Composable
@@ -885,8 +990,44 @@ fun ExtractedVoiceScreen(
         mutableStateOf<File?>(null)
     }
 
+    var showFeatureList by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedFeatures by remember {
+        mutableStateOf<List<Float>>(emptyList())
+    }
+
     val mediaPlayer = remember {
         MediaPlayer()
+    }
+
+    // ========================================================
+    // REFRESH FILE LIST WHEN SCREEN OPENS
+    // ========================================================
+
+    LaunchedEffect(Unit) {
+
+        files =
+            loadExtractedVoiceFiles(
+                context
+            )
+    }
+
+    // ========================================================
+    // FEATURE LIST
+    // ========================================================
+
+    if (showFeatureList) {
+
+        FeatureListScreen(
+            features = selectedFeatures,
+            onBack = {
+                showFeatureList = false
+            }
+        )
+
+        return
     }
 
     // ========================================================
@@ -937,28 +1078,26 @@ fun ExtractedVoiceScreen(
 
                             if (file != null) {
 
-                                // Stop if currently playing.
-
                                 if (
                                     currentlyPlaying ==
                                     file.absolutePath
                                 ) {
 
                                     try {
-                                        if (mediaPlayer.isPlaying) {
+
+                                        if (
+                                            mediaPlayer.isPlaying
+                                        ) {
                                             mediaPlayer.stop()
                                         }
+
                                     } catch (_: Exception) {
                                     }
 
                                     currentlyPlaying = null
                                 }
 
-                                // Delete actual WAV file.
-
                                 file.delete()
-
-                                // Refresh list.
 
                                 files =
                                     loadExtractedVoiceFiles(
@@ -999,7 +1138,6 @@ fun ExtractedVoiceScreen(
         )
     }
 
-
     // ========================================================
     // CLEANUP
     // ========================================================
@@ -1009,16 +1147,17 @@ fun ExtractedVoiceScreen(
         onDispose {
 
             try {
+
                 if (mediaPlayer.isPlaying) {
                     mediaPlayer.stop()
                 }
+
             } catch (_: Exception) {
             }
 
             mediaPlayer.release()
         }
     }
-
 
     // ========================================================
     // MAIN SCREEN
@@ -1038,7 +1177,6 @@ fun ExtractedVoiceScreen(
                 bottom = 30.dp
             )
     ) {
-
 
         // ====================================================
         // TOP BAR
@@ -1062,9 +1200,13 @@ fun ExtractedVoiceScreen(
                     .clickable {
 
                         try {
-                            if (mediaPlayer.isPlaying) {
+
+                            if (
+                                mediaPlayer.isPlaying
+                            ) {
                                 mediaPlayer.stop()
                             }
+
                         } catch (_: Exception) {
                         }
 
@@ -1104,11 +1246,9 @@ fun ExtractedVoiceScreen(
             }
         }
 
-
         Spacer(
             modifier = Modifier.height(30.dp)
         )
-
 
         // ====================================================
         // HEADER
@@ -1184,33 +1324,17 @@ fun ExtractedVoiceScreen(
                     Text(
                         text =
                             "${files.size} recording(s)",
-
                         color = Berry,
-
                         fontSize = 11.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-
         Spacer(
             modifier = Modifier.height(22.dp)
         )
-
-
-        // ====================================================
-        // REFRESH
-        // ====================================================
-
-        files =
-            loadExtractedVoiceFiles(
-                context
-            )
-
 
         // ====================================================
         // EMPTY / FILE LIST
@@ -1281,6 +1405,21 @@ fun ExtractedVoiceScreen(
                     onDelete = {
 
                         fileToDelete = file
+                    },
+
+                    onFeatures = {
+
+                        // FIX: pass context
+                        val features =
+                            AcousticFeatureStore.get(
+                                context
+                            )
+
+                        selectedFeatures =
+                            features?.toList()
+                                ?: emptyList()
+
+                        showFeatureList = true
                     }
                 )
 
@@ -1302,7 +1441,8 @@ private fun ExtractedVoiceCard(
     file: File,
     isPlaying: Boolean,
     onPlay: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onFeatures: () -> Unit
 ) {
 
     Column(
@@ -1319,11 +1459,6 @@ private fun ExtractedVoiceCard(
             )
             .padding(17.dp)
     ) {
-
-
-        // ====================================================
-        // FILE INFORMATION
-        // ====================================================
 
         Row(
             verticalAlignment =
@@ -1365,11 +1500,9 @@ private fun ExtractedVoiceCard(
                 )
             }
 
-
             Spacer(
                 modifier = Modifier.width(13.dp)
             )
-
 
             Column(
                 modifier =
@@ -1391,23 +1524,15 @@ private fun ExtractedVoiceCard(
                 Text(
                     text =
                         "WAV  •  ${formatFileSize(file.length())}",
-
                     color = SoftMuted,
-
                     fontSize = 11.sp
                 )
             }
         }
 
-
         Spacer(
             modifier = Modifier.height(14.dp)
         )
-
-
-        // ====================================================
-        // PLAY + DELETE
-        // ====================================================
 
         Row(
             modifier =
@@ -1416,9 +1541,6 @@ private fun ExtractedVoiceCard(
             horizontalArrangement =
                 Arrangement.spacedBy(9.dp)
         ) {
-
-
-            // PLAY
 
             Box(
                 modifier = Modifier
@@ -1456,14 +1578,9 @@ private fun ExtractedVoiceCard(
                             Berry,
 
                     fontSize = 12.sp,
-
-                    fontWeight =
-                        FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
             }
-
-
-            // DELETE
 
             Box(
                 modifier = Modifier
@@ -1496,6 +1613,36 @@ private fun ExtractedVoiceCard(
                 )
             }
         }
+
+        Spacer(
+            modifier = Modifier.height(10.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Butter,
+                    RoundedCornerShape(50.dp)
+                )
+                .clickable {
+                    onFeatures()
+                }
+                .padding(
+                    vertical = 10.dp
+                ),
+
+            contentAlignment =
+                Alignment.Center
+        ) {
+
+            Text(
+                text = "View Acoustic Features  →",
+                color = ButterText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
@@ -1520,6 +1667,7 @@ private fun EmptyExtractedVoiceCard() {
                 RoundedCornerShape(25.dp)
             )
             .padding(25.dp),
+
         horizontalAlignment =
             Alignment.CenterHorizontally
     ) {
@@ -1559,138 +1707,12 @@ private fun EmptyExtractedVoiceCard() {
         )
 
         Text(
-            text = "Process a call recording and your\nvoice-only audio will appear here.",
+            text =
+                "Process a call recording and your\nvoice-only audio will appear here.",
             color = Muted,
             fontSize = 13.sp,
             lineHeight = 19.sp
         )
-    }
-}
-
-
-// ============================================================
-// EXTRACTED VOICE CARD
-// ============================================================
-
-@Composable
-private fun ExtractedVoiceCard(
-    file: File,
-    isPlaying: Boolean,
-    onPlay: () -> Unit
-) {
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                White,
-                RoundedCornerShape(23.dp)
-            )
-            .border(
-                1.dp,
-                Border,
-                RoundedCornerShape(23.dp)
-            )
-            .padding(17.dp),
-        verticalAlignment =
-            Alignment.CenterVertically
-    ) {
-
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(
-                    if (isPlaying) Berry else Rose,
-                    CircleShape
-                ),
-            contentAlignment =
-                Alignment.Center
-        ) {
-
-            Text(
-                text =
-                    if (isPlaying)
-                        "■"
-                    else
-                        "♫",
-
-                color =
-                    if (isPlaying)
-                        White
-                    else
-                        Berry,
-
-                fontSize = 19.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(
-            modifier = Modifier.width(13.dp)
-        )
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-
-            Text(
-                text = file.name,
-                color = Slate,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
-
-            Text(
-                text = formatFileSize(file.length()),
-                color = SoftMuted,
-                fontSize = 11.sp
-            )
-        }
-
-        Spacer(
-            modifier = Modifier.width(8.dp)
-        )
-
-        Box(
-            modifier = Modifier
-                .background(
-                    if (isPlaying)
-                        Berry
-                    else
-                        Rose,
-                    RoundedCornerShape(50.dp)
-                )
-                .clickable {
-                    onPlay()
-                }
-                .padding(
-                    horizontal = 14.dp,
-                    vertical = 9.dp
-                )
-        ) {
-
-            Text(
-                text =
-                    if (isPlaying)
-                        "Stop"
-                    else
-                        "Play",
-
-                color =
-                    if (isPlaying)
-                        White
-                    else
-                        Berry,
-
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
     }
 }
 
@@ -1754,4 +1776,3 @@ private fun formatFileSize(
             )
     }
 }
-

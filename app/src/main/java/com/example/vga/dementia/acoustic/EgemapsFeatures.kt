@@ -1,4 +1,4 @@
-package com.example.vga.acoustic
+package com.example.vga.dementia.acoustic
 
 object EgemapsFeatures {
 
