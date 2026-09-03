@@ -33,14 +33,24 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        jniLibs {
+            pickFirsts += "lib/arm64-v8a/libonnxruntime.so"
+            pickFirsts += "lib/armeabi-v7a/libonnxruntime.so"
+            pickFirsts += "lib/x86/libonnxruntime.so"
+            pickFirsts += "lib/x86_64/libonnxruntime.so"
+        }
+    }
 }
 
 dependencies {
+    implementation("com.github.k2-fsa:sherpa-onnx:v1.13.0")
     implementation(files("libs/opensmile-debug.aar"))
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.github.gkonovalov.android-vad:webrtc:2.0.10")
     implementation("androidx.work:work-runtime-ktx:2.10.1")
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.24.3")
+    //implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
